@@ -1,7 +1,7 @@
 android-unused-resources
 ========================
 
-Introduction
+<b>Introduction</b>
 
 이 프로젝트는 https://code.google.com/p/android-unused-resources/ 에서 몇가지 기능을 추가한 버전입니다.
 
