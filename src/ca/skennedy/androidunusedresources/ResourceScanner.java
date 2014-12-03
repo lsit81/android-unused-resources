@@ -20,16 +20,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ResourceScanner {
-    private final File mBaseDirectory;
+//    private final File mBaseDirectory;
     private final boolean mIsAutoDeleteResource;
 
-    private File mSrcDirectory = null;
-    private File mResDirectory = null;
-    private File mGenDirectory = null;
-
-    private File mManifestFile = null;
-    private File mRJavaFile = null;
-    private String mPackageName = null;
+    private ProjectTreeOfEclipse mProjectTree;
 
     private final Set<Resource> mResources = new HashSet<Resource>();
     private final Set<Resource> mUsedResources = new HashSet<Resource>();
@@ -603,8 +597,7 @@ public class ResourceScanner {
     }
 
     public ResourceScanner() {
-        final String baseDirectory = System.getProperty("user.dir");
-        mBaseDirectory = new File(baseDirectory);
+        mProjectTree = new ProjectTreeOfEclipse();
         mIsAutoDeleteResource = false;
     }
 
@@ -615,12 +608,12 @@ public class ResourceScanner {
      *            The project directory to use.
      */
     protected ResourceScanner(final String baseDirectory) {
-    	mBaseDirectory = new File(baseDirectory);
+    	mProjectTree = new ProjectTreeOfEclipse(baseDirectory);
     	mIsAutoDeleteResource = false;
     }
     
     protected ResourceScanner(final String baseDirectory, final boolean isAutoDelete) {
-    	mBaseDirectory = new File(baseDirectory);
+    	mProjectTree = new ProjectTreeOfEclipse(baseDirectory);
     	mIsAutoDeleteResource = isAutoDelete;
     	
     	if (mIsAutoDeleteResource) {
@@ -629,38 +622,16 @@ public class ResourceScanner {
     }
 
     public void run() {
-        System.out.println("Running in: " + mBaseDirectory.getAbsolutePath());
-
-        findPaths();
-
-        if (mSrcDirectory == null || mResDirectory == null || mManifestFile == null) {
-            System.err.println("The current directory is not a valid Android project root.");
-            return;
-        }
-
-        mPackageName = findPackageName(mManifestFile);
-
-        if (mPackageName == null || mPackageName.trim().length() == 0) {
-            System.err.println("Unable to determine your application's package name from AndroidManifest.xml.  Please ensure it is set.");
-            return;
-        }
-
-        if (mGenDirectory == null) {
-            System.err.println("You must first build your project to generate R.java");
-            return;
-        }
-
-        mRJavaFile = findRJavaFile(mGenDirectory, mPackageName);
-
-        if (mRJavaFile == null) {
-            System.err.println("You must first build your project to generate R.java");
-            return;
-        }
+    	mProjectTree.find();
+    	
+    	if (mProjectTree.isValidProject() == false) {
+    		return;
+    	}
 
         mResources.clear();
 
         try {
-            mResources.addAll(getResourceList(mRJavaFile));
+            mResources.addAll(getResourceList(mProjectTree.getRJavaDirectory()));
         } catch (final IOException e) {
             System.err.println("The R.java found could not be opened.");
             e.printStackTrace();
@@ -671,9 +642,9 @@ public class ResourceScanner {
 
         mUsedResources.clear();
 
-        searchFiles(null, mSrcDirectory, sJavaFileType);
-        searchFiles(null, mResDirectory, sXmlFileType);
-        searchFiles(null, mManifestFile, sXmlFileType);
+        searchFiles(null, mProjectTree.getSourceDirectory(), sJavaFileType);
+        searchFiles(null, mProjectTree.getResourceDirectory(), sXmlFileType);
+        searchFiles(null, mProjectTree.getManifestFile(), sXmlFileType);
 
         /*
          * Because attr and styleable are so closely linked, we need to do some matching now to ensure we don't say an attr is unused if its corresponding
@@ -743,7 +714,7 @@ public class ResourceScanner {
             }
         }
 
-        findDeclaredPaths(null, mResDirectory, unusedResourceTypes, unusedResources);
+        findDeclaredPaths(null, mProjectTree.getResourceDirectory(), unusedResourceTypes, unusedResources);
 
         /*
          * Find the paths where the used resources are declared.
@@ -772,7 +743,7 @@ public class ResourceScanner {
             }
         }
 
-        findDeclaredPaths(null, mResDirectory, usedResourceTypes, usedResources);
+        findDeclaredPaths(null, mProjectTree.getResourceDirectory(), usedResourceTypes, usedResources);
 
         // Deal with resources from library projects
         final Set<Resource> libraryProjectResources = getLibraryProjectResources();
@@ -794,7 +765,7 @@ public class ResourceScanner {
             }
         }
 
-        final UsageMatrix usageMatrix = new UsageMatrix(mBaseDirectory, usedResources);
+        final UsageMatrix usageMatrix = new UsageMatrix(mProjectTree.getBaseDirectory(), usedResources);
         usageMatrix.generateMatrices();
 
         final int unusedResourceCount = mResources.size();
@@ -822,57 +793,6 @@ public class ResourceScanner {
         }
     }
 
-    private void findPaths() {
-        final File[] children = mBaseDirectory.listFiles();
-
-        if (children == null) {
-            return;
-        }
-
-        for (final File file : children) {
-            if (file.isDirectory()) {
-                if (file.getName().equals("src")) {
-                    mSrcDirectory = file;
-                } else if (file.getName().equals("res")) {
-                    mResDirectory = file;
-                } else if (file.getName().equals("gen")) {
-                    mGenDirectory = file;
-                }
-            } else if (file.getName().equals("AndroidManifest.xml")) {
-                mManifestFile = file;
-            }
-        }
-    }
-
-    private static String findPackageName(final File androidManifestFile) {
-        String manifest = "";
-
-        try {
-            manifest = FileUtilities.getFileContents(androidManifestFile);
-        } catch (final IOException e) {
-            e.printStackTrace();
-        }
-
-        final Pattern pattern = Pattern.compile("<manifest\\s+.*?package\\s*=\\s*\"([A-Za-z0-9_\\.]+)\".*?>");
-        final Matcher matcher = pattern.matcher(manifest);
-
-        if (matcher.find()) {
-            return matcher.group(1);
-        }
-
-        return null;
-    }
-
-    private static File findRJavaFile(final File baseDirectory, final String packageName) {
-        final File rJava = new File(baseDirectory, packageName.replace('.', '/') + "/R.java");
-
-        if (rJava.exists()) {
-            return rJava;
-        }
-
-        return null;
-    }
-
     /**
      * Removes all resources declared in library projects.
      */
@@ -880,7 +800,7 @@ public class ResourceScanner {
         final Set<Resource> resources = new HashSet<Resource>();
 
         // Find the library projects
-        final File projectPropertiesFile = new File(mBaseDirectory, "project.properties");
+        final File projectPropertiesFile = new File(mProjectTree.getBaseDirectory(), "project.properties");
 
         if (!projectPropertiesFile.exists()) {
             return resources;
@@ -907,11 +827,11 @@ public class ResourceScanner {
 
         // We have the paths to the library projects, now we need their R.java files
         for (final String libraryProjectPath : libraryProjectPaths) {
-            final File libraryProjectDirectory = new File(mBaseDirectory, libraryProjectPath);
+            final File libraryProjectDirectory = new File(mProjectTree.getBaseDirectory(), libraryProjectPath);
 
             if (libraryProjectDirectory.exists() && libraryProjectDirectory.isDirectory()) {
-                final String libraryProjectPackageName = findPackageName(new File(libraryProjectDirectory, "AndroidManifest.xml"));
-                final File libraryProjectRJavaFile = findRJavaFile(new File(libraryProjectDirectory, "gen"), libraryProjectPackageName);
+                final String libraryProjectPackageName = ProjectTreeOfEclipse.findPackageName(new File(libraryProjectDirectory, "AndroidManifest.xml"));
+                final File libraryProjectRJavaFile = ProjectTreeOfEclipse.findRJavaFile(new File(libraryProjectDirectory, "gen"), libraryProjectPackageName);
 
                 // If a project has no resources, it will have no R.java
                 if (libraryProjectRJavaFile != null) {
