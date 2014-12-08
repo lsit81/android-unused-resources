@@ -8,6 +8,7 @@ android-unused-resources
 
 추가된 기능
    - 사용되지 않는 리소스 자동 삭제 기능
+   - android studio용 프로젝트도 사용할 수있도록 수정 (2014.12.08)
 
 Copyright 및 License는 android-unused-resources 프로젝트와 동일합니다.
 - Apache License, Version 2.0
