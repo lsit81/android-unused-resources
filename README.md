@@ -10,6 +10,14 @@ android-unused-resources
    - 사용되지 않는 리소스 자동 삭제 기능
    - android studio용 프로젝트도 사용할 수있도록 수정 (2014.12.08)
 
+사용법
+   - java -Dfile.encoding=UTF-8 -jar AndroidUnusedResources.jar [프로젝트 root 경로] [자동 삭제 옵션 true | false] 
+
+   - 프로젝트 경로 옵션 설명
+      EClipse 프로젝트 : AndroidManifest.xml이 존재하는 경로 지정.
+      Android Studio 프로젝트 : build.gradle이 존재하는 경로 지정.
+      (android { ... } 에 대하여 정의된 build.gradle이여야 함.)
+
 Copyright 및 License는 android-unused-resources 프로젝트와 동일합니다.
 - Apache License, Version 2.0
 
