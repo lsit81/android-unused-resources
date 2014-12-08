@@ -11,7 +11,8 @@ android-unused-resources
    - android studio용 프로젝트도 사용할 수있도록 수정 (2014.12.08)
 
 <b>사용법</b>
-   - java -Dfile.encoding=UTF-8 -jar AndroidUnusedResources.jar [프로젝트 root 경로] [자동 삭제 옵션 true | false] 
+- java -Dfile.encoding=UTF-8 -jar AndroidUnusedResources.jar [프로젝트 root 경로] [자동 삭제 옵션 true | false] <br />
+최소 2번 이상 실행해서 더 이상 삭제할 게 없을때까지 동작시켜야 리소스가 정상 제거됩니다.
 
 - 프로젝트 경로 옵션 설명<br />
 EClipse 프로젝트 : AndroidManifest.xml이 존재하는 경로 지정.<br />
