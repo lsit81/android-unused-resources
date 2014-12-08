@@ -64,7 +64,6 @@ public class ProjectTreeOfAndroidStudio extends ProjectTree {
 				return;
 			}
 			
-			System.out.println(matcher.group(0));
 			mManifestFile = findFilePath("(manifest\\.srcFile.*?').*?(?=')", matcher.group(0));
 			System.out.println("manifest file = " + mManifestFile.getAbsolutePath());
 			
@@ -154,7 +153,6 @@ public class ProjectTreeOfAndroidStudio extends ProjectTree {
 				return;
 			}
 			
-			System.out.println("product = " + matcher.group(0));
 			String productFalvorBlock = getBlock(matcher.group(0));
 			if (productFalvorBlock == null) {
 				return;
