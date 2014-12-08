@@ -13,7 +13,7 @@ android-unused-resources
 사용법
    - java -Dfile.encoding=UTF-8 -jar AndroidUnusedResources.jar [프로젝트 root 경로] [자동 삭제 옵션 true | false] 
 
-   - 프로젝트 경로 옵션 설명
+   프로젝트 경로 옵션 설명
       EClipse 프로젝트 : AndroidManifest.xml이 존재하는 경로 지정.
       Android Studio 프로젝트 : build.gradle이 존재하는 경로 지정.
       (android { ... } 에 대하여 정의된 build.gradle이여야 함.)
