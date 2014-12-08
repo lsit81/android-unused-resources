@@ -23,7 +23,7 @@ public class ResourceScanner {
 //    private final File mBaseDirectory;
     private final boolean mIsAutoDeleteResource;
 
-    private ProjectTreeOfEclipse mProjectTree;
+    private ProjectTree mProjectTree;
 
     private final Set<Resource> mResources = new HashSet<Resource>();
     private final Set<Resource> mUsedResources = new HashSet<Resource>();
@@ -597,7 +597,7 @@ public class ResourceScanner {
     }
 
     public ResourceScanner() {
-        mProjectTree = new ProjectTreeOfEclipse();
+        mProjectTree = ProjectTreeFactory.createProjectTree();
         mIsAutoDeleteResource = false;
     }
 
@@ -608,12 +608,12 @@ public class ResourceScanner {
      *            The project directory to use.
      */
     protected ResourceScanner(final String baseDirectory) {
-    	mProjectTree = new ProjectTreeOfEclipse(baseDirectory);
+    	mProjectTree = ProjectTreeFactory.createProjectTree(baseDirectory);
     	mIsAutoDeleteResource = false;
     }
     
     protected ResourceScanner(final String baseDirectory, final boolean isAutoDelete) {
-    	mProjectTree = new ProjectTreeOfEclipse(baseDirectory);
+    	mProjectTree = ProjectTreeFactory.createProjectTree(baseDirectory);
     	mIsAutoDeleteResource = isAutoDelete;
     	
     	if (mIsAutoDeleteResource) {
@@ -622,9 +622,7 @@ public class ResourceScanner {
     }
 
     public void run() {
-    	mProjectTree.find();
-    	
-    	if (mProjectTree.isValidProject() == false) {
+    	if (mProjectTree == null || mProjectTree.isValidProject() == false) {
     		return;
     	}
 
@@ -638,14 +636,14 @@ public class ResourceScanner {
         }
 
         System.out.println(mResources.size() + " resources found");
-        System.out.println();
-
+        System.out.println("scan directory");
         mUsedResources.clear();
 
         searchFiles(null, mProjectTree.getSourceDirectory(), sJavaFileType);
         searchFiles(null, mProjectTree.getResourceDirectory(), sXmlFileType);
         searchFiles(null, mProjectTree.getManifestFile(), sXmlFileType);
-
+        System.out.println("");
+        
         /*
          * Because attr and styleable are so closely linked, we need to do some matching now to ensure we don't say an attr is unused if its corresponding
          * styleable is used.
@@ -681,15 +679,18 @@ public class ResourceScanner {
             }
         }
 
+        System.out.println("\nMove the new found used resources to the used set");
         // Move the new found used resources to the used set
         for (final Resource resource : extraUsedResources) {
             mResources.remove(resource);
             mUsedResources.add(resource);
+            System.out.print(".");
         }
 
         /*
          * Find the paths where the unused resources are declared.
          */
+        System.out.println("\nFind the paths where the unused resources are declared");
         final SortedMap<String, SortedMap<String, Resource>> unusedResources = new TreeMap<String, SortedMap<String, Resource>>();
 
         for (final Resource resource : mResources) {
@@ -702,9 +703,11 @@ public class ResourceScanner {
             }
 
             typeMap.put(resource.getName(), resource);
+            System.out.print(".");
         }
 
         // Ensure we only try to find resource types that exist in the map we just built
+        System.out.println("\nEnsure we only try to find resource types that exist in the map we just built");
         final Map<String, ResourceType> unusedResourceTypes = new HashMap<String, ResourceType>(unusedResources.size());
 
         for (final String type : unusedResources.keySet()) {
@@ -712,6 +715,7 @@ public class ResourceScanner {
             if (resourceType != null) {
                 unusedResourceTypes.put(type, resourceType);
             }
+            System.out.print(".");
         }
 
         findDeclaredPaths(null, mProjectTree.getResourceDirectory(), unusedResourceTypes, unusedResources);
@@ -719,6 +723,7 @@ public class ResourceScanner {
         /*
          * Find the paths where the used resources are declared.
          */
+        System.out.println("\nFind the paths where the used resources are declared");
         final SortedMap<String, SortedMap<String, Resource>> usedResources = new TreeMap<String, SortedMap<String, Resource>>();
 
         for (final Resource resource : mUsedResources) {
@@ -731,6 +736,7 @@ public class ResourceScanner {
             }
 
             typeMap.put(resource.getName(), resource);
+            System.out.print(".");
         }
 
         // Ensure we only try to find resource types that exist in the map we just built
@@ -882,6 +888,7 @@ public class ResourceScanner {
     private void searchFiles(final File parent, final File file, final FileType fileType) {
         if (file.isDirectory()) {
             for (final File child : file.listFiles()) {
+            	System.out.print(".");
                 searchFiles(file, child, fileType);
             }
         } else if (file.getName().endsWith(fileType.getExtension())) {
